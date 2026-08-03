@@ -19,6 +19,7 @@
  */
 
 /** XDRFILE lib for XTC file support */
+#include <ctype.h>
 #include <gromacs/xdrfile_xtc.h>
 #include <gromacs/xdrfile.c>
 #include <gromacs/xdrfile_xtc.c>
@@ -137,7 +138,7 @@ int split_amber_mol_crd(MOL2 *mol, MOL2 **mylig, MOL2 **myprot)
                         lig->x[j] = mol->x[i];
                         lig->y[j] = mol->y[i];
                         lig->z[j] = mol->z[i];
-                        lig->vdw_selection[k] = mol->vdw_selection[i];
+                        lig->vdw_selection[j] = mol->vdw_selection[i];
                         ++j;
                 }else{
                         prot->x[k] = mol->x[i];
@@ -176,7 +177,6 @@ void clean_amber_split_mol(MOL2 **mymol)
         free(lig->selection );
         free(lig->fragment_flag );
         free(lig->conformers );
-        free(lig->n_fragments );
         free(lig->gaff_types );
         free(lig->ism_types );
         free(lig->ism_selection );
@@ -216,7 +216,6 @@ void clean_amber_mol(MOL2 **mymol)
         free(mol->exclude );
         free(mol->selection );
         free(mol->fragment_flag );
-        free(mol->n_fragments );
 
         free(mol->res_num );
         free(mol->internal_res_num );
