@@ -224,6 +224,13 @@ int default_conformer;
 
 } MOL2;
 
+/* Forward declarations for functions used across the molecular runtime */
+void init_molecule(MOL2 **mymol, int natoms, int conformers);
+int cleanup(MOL2 **mymols);
+int mol_percieve(MOL2 **mymol);
+void AMBER_atom_typing(MOL2 **mymol);
+int q13_bond(MOL2 *mol, int atom, int second_atom);
+int get_number_any_bond_p(MOL2 *mol, int atom, int second_atom);
 
 /**
  *	Groups for mistmachts structure

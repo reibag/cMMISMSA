@@ -40,8 +40,8 @@ GAFF_atom_typing (MOL2 ** mymols)
     mols->gaff_types[i] = -1;
 
 
-  vecinos = (int *) calloc (sizeof (int *), mols->n_atoms + 1);
-  vecinos2 = (int *) calloc (sizeof (int *), mols->n_atoms + 1);
+  vecinos = (int *) calloc (sizeof (int), mols->n_atoms + 1);
+  vecinos2 = (int *) calloc (sizeof (int), mols->n_atoms + 1);
 
   for (i = 0; i < mols->n_atoms; ++i)
     {
@@ -964,15 +964,27 @@ void assign_gaff_vdw_types(MOL2 **mymol)
 {
     MOL2 *mols = NULL;
     int i = 0;
+    int gaff_type = 0;
+    int index = 0;
 
     mols = *mymol;
 
     for ( i = 0; i < mols->n_atoms; i++)
     {
-    /* Assign epsilon (well depth) parameter from GAFF */
-    mols->vdw_parm1[i] = gaff_vdw_epsilon[ mols->gaff_types[i] -1 ];
-    /* Assign r0 (equilibrium distance) parameter from GAFF */
-    mols->vdw_parm2[i] = gaff_vdw_r0[ mols->gaff_types[i] -1 ];
+        gaff_type = mols->gaff_types[i];
+        index = gaff_type - 1;
+
+        if (gaff_type < 1 || index >= 280)
+        {
+            mols->vdw_parm1[i] = 0.0f;
+            mols->vdw_parm2[i] = 0.0f;
+            continue;
+        }
+
+        /* Assign epsilon (well depth) parameter from GAFF */
+        mols->vdw_parm1[i] = gaff_vdw_epsilon[index];
+        /* Assign r0 (equilibrium distance) parameter from GAFF */
+        mols->vdw_parm2[i] = gaff_vdw_r0[index];
     }
 
     *mymol = mols;
