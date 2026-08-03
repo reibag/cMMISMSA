@@ -18,129 +18,147 @@
  *
  */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 void select_on_mask(MOL2 **mymol, char *mask, int verbose)
 {
 	MOL2 *mol = NULL;
-	char *token = NULL, *token2_1 = NULL, *token2_2 = NULL;
-	char *current_mask = NULL;
-	char *global_mask;
-
-	char *local_mask = NULL;
-
+	char *token = NULL;
+	char *mask_copy = NULL;
+	char *dash = NULL;
 	int first = -1, last = -1, i = 0;
 	int total = 0;
 
+	if (mymol == NULL || *mymol == NULL)
+		return;
+
 	mol = *mymol;
-	current_mask = mask;
-
-   	token = strtok_r(mask, ",",&global_mask);
-   
-	while( token != NULL ) 
-   	{
-		first = -1; last = -1;
-/*      		printf( "%s\n", token );*/
-		local_mask = NULL;
-		token2_2 = NULL;
-
-		token2_1 = strtok_r(token,"-",&local_mask);
-		if( local_mask != NULL)
-		 token2_2 = strtok_r(local_mask,"-",&local_mask);
-
-		if( token2_2 != NULL)
-		  last = atoi(token2_2);
-		first = atoi(token2_1);
-
-		/*
-	        if( verbose )
-	        {
-			fprintf(stderr,"From: %i to: %i\n",first,last);
-		}*/
-
-		if( last == -1)
-		 last = first;
-		for( i = 0; i < mol->n_atoms; i++)
+	if (mask == NULL || *mask == '\0')
+	{
+		for (i = 0; i < mol->n_atoms; i++)
 		{
-			if( mol->internal_res_num[i]+1 >= first && mol->internal_res_num[i]+1 <= last)
+			mol->backbone[i] = 1;
+			++total;
+		}
+		if (verbose)
+		{
+			fprintf(stderr, "Mask: Selected %i atoms (default all atoms)\n", total);
+			fflush(stderr);
+		}
+		return;
+	}
+
+	mask_copy = strdup(mask);
+	if (mask_copy == NULL)
+		return;
+
+	token = strtok(mask_copy, ",");
+	while (token != NULL)
+	{
+		first = -1;
+		last = -1;
+		dash = strchr(token, '-');
+		if (dash != NULL)
+		{
+			*dash = '\0';
+			first = atoi(token);
+			last = atoi(dash + 1);
+		}
+		else
+		{
+			first = atoi(token);
+			last = first;
+		}
+
+		if (last == -1)
+			last = first;
+
+		for (i = 0; i < mol->n_atoms; i++)
+		{
+			if (mol->internal_res_num[i] + 1 >= first && mol->internal_res_num[i] + 1 <= last)
 			{
 				mol->backbone[i] = 1;
 				++total;
 			}
 		}
 
-      		token = strtok_r(global_mask, ",",&global_mask);
-   	}
-
-	if( verbose )
-	{
-		fprintf(stderr,"Mask: Selected %i atoms\n",total);
-		fflush(stderr);
+		token = strtok(NULL, ",");
 	}
 
-	return;
+	free(mask_copy);
+
+	if (verbose)
+	{
+		fprintf(stderr, "Mask: Selected %i atoms\n", total);
+		fflush(stderr);
+	}
 }
 
 void select_on_mask_atoms(MOL2 **mymol, char *mask, int verbose)
 {
 	MOL2 *mol = NULL;
-	char *token = NULL, *token2_1 = NULL, *token2_2 = NULL;
-	char *current_mask = NULL;
-	char *global_mask;
-
-	char *local_mask = NULL;
-
+	char *token = NULL;
+	char *mask_copy = NULL;
+	char *dash = NULL;
 	int first = -1, last = -1, i = 0;
 	int total = 0;
 
+	if (mymol == NULL || *mymol == NULL)
+		return;
+
 	mol = *mymol;
-	current_mask = mask;
+	if (mask == NULL || *mask == '\0')
+		return;
 
-   	token = strtok_r(mask, ",",&global_mask);
-   
-	while( token != NULL ) 
-   	{
-		first = -1; last = -1;
-/*      		printf( "%s\n", token );*/
-		local_mask = NULL;
-		token2_2 = NULL;
+	mask_copy = strdup(mask);
+	if (mask_copy == NULL)
+		return;
 
-		token2_1 = strtok_r(token,"-",&local_mask);
-		if( local_mask != NULL)
-		 token2_2 = strtok_r(local_mask,"-",&local_mask);
-
-		if( token2_2 != NULL)
-		  last = atoi(token2_2);
-		first = atoi(token2_1);
-
-		/*
-	        if( verbose )
-	        {
-			fprintf(stderr,"From: %i to: %i\n",first,last);
-		}*/
-
-		if( last == -1)
-		 last = first;
-
-		if( last >= mol->n_atoms)
-			last = mol->n_atoms-1;
-
-		for( i = first-1; i <= last-1; i++)
+	token = strtok(mask_copy, ",");
+	while (token != NULL)
+	{
+		first = -1;
+		last = -1;
+		dash = strchr(token, '-');
+		if (dash != NULL)
 		{
-			
-				mol->backbone[i] = 1;
-				++total;
+			*dash = '\0';
+			first = atoi(token);
+			last = atoi(dash + 1);
+		}
+		else
+		{
+			first = atoi(token);
+			last = first;
 		}
 
-      		token = strtok_r(global_mask, ",",&global_mask);
-   	}
+		if (last == -1)
+			last = first;
+		if (last >= mol->n_atoms)
+			last = mol->n_atoms - 1;
+		if (first < 1)
+			first = 1;
 
-	if( verbose )
-	{
-		fprintf(stderr,"Mask: Selected %i atoms\n",total);
-		fflush(stderr);
+		for (i = first - 1; i <= last - 1; i++)
+		{
+			if (i >= 0 && i < mol->n_atoms)
+			{
+				mol->backbone[i] = 1;
+				++total;
+			}
+		}
+
+		token = strtok(NULL, ",");
 	}
 
-	return;
+	free(mask_copy);
+
+	if (verbose)
+	{
+		fprintf(stderr, "Mask: Selected %i atoms\n", total);
+		fflush(stderr);
+	}
 }
 
