@@ -1229,7 +1229,6 @@ main (argc, argv)
 	    }
 
 	  fflush (f_eigenvals);
-	  fclose (f_eigenvals);
 
 	  qh_entropy =
 	    quasiharmonic_entropy (quasi_values, 3 * entropy_natoms);
