@@ -47,3 +47,78 @@ An implementation of Classical Molecular Mechanics Implicit Solvation Model Surf
       - Faster/Slower depending on the case than Fortran MMISMSA :/
 
 </pre>
+
+## Build instructions (main branch compatibility + entropy)
+
+The project now supports entropy-enabled builds directly from the Makefile in `src/`.
+
+### 1) Build with entropy (default)
+
+From `src/`:
+
+```bash
+make clean
+make
+```
+
+This default build enables entropy (`-D_ENTROPY`) and links against LAPACKE/OpenBLAS.
+
+### 2) Build without entropy
+
+From `src/`:
+
+```bash
+make noentropy
+```
+
+Use this mode when LAPACKE/OpenBLAS are not available.
+
+### 3) Linux example
+
+Install required development packages (package names may vary by distro), then build:
+
+```bash
+cd src
+make clean
+make
+```
+
+If headers/libraries are installed in a non-standard prefix:
+
+```bash
+make LAPACK_PREFIX=/opt/lapack
+```
+
+### 4) MSYS2 / MinGW64 example
+
+Install dependencies in MSYS2 and build inside a MinGW64 shell:
+
+```bash
+pacman -S --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-openblas mingw-w64-x86_64-lapack
+cd src
+make clean
+make
+```
+
+The Makefile also accepts an explicit prefix, e.g.:
+
+```bash
+make LAPACK_PREFIX=/mingw64
+```
+
+### 5) Windows + make from PowerShell/cmd
+
+If you invoke `make` from PowerShell/cmd (instead of MSYS2 shell), pass the MinGW64 prefix explicitly when needed:
+
+```powershell
+cd src
+make clean
+make LAPACK_PREFIX=C:/msys64/mingw64
+```
+
+### Notes
+
+* Build target: `MM`
+* Entropy target: `make entropy`
+* Debug target: `make debug`
+* Clean target is portable for both Unix-like shells and Windows cmd
