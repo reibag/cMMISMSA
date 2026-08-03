@@ -104,7 +104,11 @@ enum xdr_op
  * it to the doxygen documentation.
  */
 #if !(defined INT32_MAX || defined DOXYGEN)
-#    if (INT_MAX == 2147483647)
+#    if defined(HAVE_STDINT_H) || defined(HAVE_INTTYPES_H)
+#        include <stdint.h>
+#    elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
+#        include <stdint.h>
+#    elif (INT_MAX == 2147483647)
 #        define int32_t int
 #        define uint32_t unsigned int
 #        define INT32_MAX 2147483647
