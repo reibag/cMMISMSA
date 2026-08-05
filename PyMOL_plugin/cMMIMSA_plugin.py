@@ -6,7 +6,7 @@ MMISMSA Analyzer - Complete Single-Script PyMOL Plugin
 An advanced, production-ready PyMOL plugin for parsing, analyzing, 
 visualizing, and reporting MMISMSA molecular dynamics output files.
 DATE: 2026-08-05
-AUTHOR: Javier García Marín (assisted by Gemini Flash)
+AUTHOR: Javier García Marín
 AFFILIATION: University of Alcalá (Department of Organic and Inorganic Chemistry)
 LICENSE: GNU GENERAL PUBLIC LICENSE (GPLv3)
 ==============================================================================
