@@ -1,8 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 MMISMSA Analyzer - Complete Single-Script PyMOL Plugin
 ======================================================
 An advanced, production-ready PyMOL plugin for parsing, analyzing, 
 visualizing, and reporting MMISMSA molecular dynamics output files.
+DATE: 2026-08-05
+AUTHOR: Javier García Marín (assisted by Gemini Flash)
+AFFILIATION: University of Alcalá (Department of Organic and Inorganic Chemistry)
+LICENSE: GNU GENERAL PUBLIC LICENSE (GPLv3)
+==============================================================================
 """
 
 import base64
@@ -67,7 +74,7 @@ except ImportError as err:
 # ==============================================================================
 # 2. CONSTANTS, LOGO & DATA MODELS
 # ==============================================================================
-VERSION = "1.0.0"
+VERSION = "1.2.0"
 
 # Neutral UI palette to keep the interface modern and visually consistent
 UI_COLORS: Dict[str, str] = {
@@ -155,6 +162,46 @@ class EnergyTermStats:
     term: str
     mean: float
     std: float
+
+
+class SortableResidueTable(QtWidgets.QTableWidget):
+    """QTableWidget that sorts numeric data correctly when a header is clicked."""
+
+    def sortItems(self, column: int, order: QtCore.Qt.SortOrder = QtCore.Qt.AscendingOrder) -> None:
+        rows = self.rowCount()
+        items = []
+        for row in range(rows):
+            item = self.item(row, column)
+            if item is None:
+                continue
+            raw_value = item.data(QtCore.Qt.UserRole)
+            if raw_value is None:
+                try:
+                    raw_value = float(item.text())
+                except (TypeError, ValueError):
+                    raw_value = item.text()
+            items.append((raw_value, row, item))
+
+        def compare_values(left, right):
+            left_value, _, _ = left
+            right_value, _, _ = right
+            if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)):
+                return -1 if left_value < right_value else 1 if left_value > right_value else 0
+            if isinstance(left_value, str) and isinstance(right_value, str):
+                return -1 if left_value.lower() < right_value.lower() else 1 if left_value.lower() > right_value.lower() else 0
+            return 0
+
+        items.sort(key=lambda entry: entry[0], reverse=(order == QtCore.Qt.DescendingOrder))
+        if not all(isinstance(entry[0], (int, float)) for entry in items):
+            items.sort(key=lambda entry: str(entry[0]).lower(), reverse=(order == QtCore.Qt.DescendingOrder))
+
+        for new_row, (_, old_row, _) in enumerate(items):
+            for col in range(self.columnCount()):
+                source_item = self.takeItem(old_row, col)
+                if source_item is not None:
+                    self.setItem(new_row, col, source_item)
+
+        self.sortByColumn(column, order)
 
 
 class MMISMSADataSet:
@@ -904,7 +951,7 @@ class ResidueAnalysisTab(QtWidgets.QWidget):
         r1.addWidget(self.btn_exp_res_csv)
 
         r2 = QtWidgets.QHBoxLayout()
-        r2.addWidget(QtWidgets.QLabel("Start Residue Number:"))
+        r2.addWidget(QtWidgets.QLabel("Set Start Residue ID:"))
         self.spin_start_res = QtWidgets.QSpinBox()
         self.spin_start_res.setRange(-9999, 99999)
         self.spin_start_res.setValue(1)
@@ -926,7 +973,7 @@ class ResidueAnalysisTab(QtWidgets.QWidget):
         layout.addWidget(ctrl_box)
 
         # Table
-        self.table = QtWidgets.QTableWidget()
+        self.table = SortableResidueTable()
         self.table.setColumnCount(9)
         self.table.setHorizontalHeaderLabels([
             "Residue", 
@@ -935,6 +982,10 @@ class ResidueAnalysisTab(QtWidgets.QWidget):
             "Vdw Mean", "Vdw Std",
             "Desolvation Mean", "Desolvation Std"
         ])
+        self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.table.setSortingEnabled(True)
+        self.table.itemSelectionChanged.connect(self._on_residue_table_selection_changed)
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         layout.addWidget(self.table)
 
@@ -1007,16 +1058,65 @@ class ResidueAnalysisTab(QtWidgets.QWidget):
 
         self.table.setRowCount(n_res)
         for idx in range(n_res):
-            res_num = start_res + idx
-            self.table.setItem(idx, 0, QtWidgets.QTableWidgetItem(f"Residue {res_num}"))
-            self.table.setItem(idx, 1, QtWidgets.QTableWidgetItem(f"{self._res_means['Total energy'][idx]:.4f}"))
-            self.table.setItem(idx, 2, QtWidgets.QTableWidgetItem(f"{self._res_stds['Total energy'][idx]:.4f}"))
-            self.table.setItem(idx, 3, QtWidgets.QTableWidgetItem(f"{self._res_means['Coulombic energy'][idx]:.4f}"))
-            self.table.setItem(idx, 4, QtWidgets.QTableWidgetItem(f"{self._res_stds['Coulombic energy'][idx]:.4f}"))
-            self.table.setItem(idx, 5, QtWidgets.QTableWidgetItem(f"{self._res_means['Van der Waals energy'][idx]:.4f}"))
-            self.table.setItem(idx, 6, QtWidgets.QTableWidgetItem(f"{self._res_stds['Van der Waals energy'][idx]:.4f}"))
-            self.table.setItem(idx, 7, QtWidgets.QTableWidgetItem(f"{self._res_means['Desolvation energy'][idx]:.4f}"))
-            self.table.setItem(idx, 8, QtWidgets.QTableWidgetItem(f"{self._res_stds['Desolvation energy'][idx]:.4f}"))
+            display_res_num = start_res + idx
+            original_res_num = idx + 1
+            row_items = []
+            residue_item = QtWidgets.QTableWidgetItem(f"Residue {display_res_num}")
+            residue_item.setData(QtCore.Qt.UserRole, display_res_num)
+            residue_item.setData(QtCore.Qt.UserRole + 1, original_res_num)
+            row_items.append(residue_item)
+            row_items.append(QtWidgets.QTableWidgetItem(f"{self._res_means['Total energy'][idx]:.4f}"))
+            row_items.append(QtWidgets.QTableWidgetItem(f"{self._res_stds['Total energy'][idx]:.4f}"))
+            row_items.append(QtWidgets.QTableWidgetItem(f"{self._res_means['Coulombic energy'][idx]:.4f}"))
+            row_items.append(QtWidgets.QTableWidgetItem(f"{self._res_stds['Coulombic energy'][idx]:.4f}"))
+            row_items.append(QtWidgets.QTableWidgetItem(f"{self._res_means['Van der Waals energy'][idx]:.4f}"))
+            row_items.append(QtWidgets.QTableWidgetItem(f"{self._res_stds['Van der Waals energy'][idx]:.4f}"))
+            row_items.append(QtWidgets.QTableWidgetItem(f"{self._res_means['Desolvation energy'][idx]:.4f}"))
+            row_items.append(QtWidgets.QTableWidgetItem(f"{self._res_stds['Desolvation energy'][idx]:.4f}"))
+
+            for col_idx, item in enumerate(row_items):
+                if col_idx == 0:
+                    item.setData(QtCore.Qt.UserRole, display_res_num)
+                else:
+                    try:
+                        value = float(item.text())
+                    except ValueError:
+                        value = item.text()
+                    item.setData(QtCore.Qt.UserRole, value)
+                self.table.setItem(idx, col_idx, item)
+
+    def _parse_selected_residue_number(self) -> Optional[int]:
+        if self.table.currentRow() < 0:
+            return None
+
+        item = self.table.item(self.table.currentRow(), 0)
+        if item is None:
+            return None
+
+        original_residue = item.data(QtCore.Qt.UserRole + 1)
+        if isinstance(original_residue, (int, float)):
+            return int(original_residue)
+
+        text = item.text().strip()
+        try:
+            return int(text.split()[-1])
+        except ValueError:
+            return None
+
+    @Slot()
+    def _on_residue_table_selection_changed(self) -> None:
+        if not self._loaded_pdb_obj:
+            return
+
+        res_num = self._parse_selected_residue_number()
+        if res_num is None:
+            return
+
+        selection_target = (self.txt_sel.text().strip() or self._loaded_pdb_obj).strip()
+        pymol_sel = f"({selection_target}) and resi {res_num}"
+        cmd.select("mmismsa_selected_residue", pymol_sel)
+        cmd.zoom("mmismsa_selected_residue", 5)
+        cmd.center("mmismsa_selected_residue")
 
     @Slot()
     def _load_pdb_file(self) -> None:
